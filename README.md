@@ -250,7 +250,6 @@ sudo tail -n 20 /var/log/nginx/error_json.log
 - `100011` — HTTP 403
 - `100012` — HTTP 401
 - `100013` — SQLi (`OR 1=1`, `UNION SELECT`, `sqlmap`)
-- `100014` — path traversal / LFI (`..`, `/etc/passwd`, `/etc/shadow`)
 - `100016` — сканеры/брут (`Hydra`, `Nikto`, `masscan`, `dirbuster`)
 - `100017` — подозрительные User-Agent (`curl`, `Wget`, `python-requests`, `PostmanRuntime`)
 - `100018` — попытки доступа к чувствительным файлам (`.env`, `.git/config`, `phpMyAdmin`)
