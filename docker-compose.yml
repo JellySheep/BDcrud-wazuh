@@ -145,7 +145,6 @@ services:
       - postfix_relay_password
     environment:
       - RELAYHOST=smtp.mail.ru:587
-      - RELAYHOST_USERNAME=MAIL
       #- RELAYHOST_PASSWORD=PASSWORD
       - RELAYHOST_PASSWORD_FILE=/run/secrets/postfix_relay_password
       - MAILNAME=wazuh.local
@@ -158,6 +157,9 @@ services:
       - POSTFIX_smtpd_sender_restrictions=
       - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject_unauth_destination
       - POSTFIX_smtpd_data_restrictions=
+      - POSTFIX_sender_canonical_maps=static:NAME@MAIL.RU
+      - POSTFIX_smtp_generic_maps=static:NAME@MAIL.RU
+      - RELAYHOST_USERNAME= NAME@MAIL.RU
 
   wazuh.indexer:
     image: wazuh/wazuh-indexer:4.14.1
