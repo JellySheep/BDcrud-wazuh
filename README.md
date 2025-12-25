@@ -2,8 +2,7 @@
 
 ## Структура
 - `BDcrud3/` — проект BDcrud (приложение + postgres + mongo + nginx)
-- `wazuh-docker/` — Wazuh docker repo
-- `logs/nginx/` — общая папка логов nginx (её читает Wazuh)
+- `wazuh-docker/` — Wazuh docker rep
 - `docker-compose.yml` — единый compose
 
 ## Запуск
