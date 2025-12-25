@@ -1,1 +1,0 @@
-{"time":"2025-12-25T12:15:51+00:00","remote_addr":"127.0.0.1","x_forwarded_for":"","request":"POST /products HTTP/1.1","status":201,"body_bytes_sent":218,"request_time":0.046,"upstream_addr":"127.0.0.1:8000","upstream_status":"201","upstream_response_time":"0.046","host":"localhost","uri":"/products","method":"POST","user_agent":"curl/7.81.0"}
