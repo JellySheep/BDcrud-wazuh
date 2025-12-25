@@ -3,36 +3,20 @@
 Репозиторий содержит **готовый лабораторный стенд «в поле воин»**:
 
 - **BDcrud3** — REST API + PostgreSQL + MongoDB  
-- **Nginx** (reverse-proxy) — HTTPS/HTTP входная точка + **JSON-логи** запросов  
+- **Nginx** (reverse-proxy) — HTTPS/HTTP входная точка + **JSON-логи**  
 - **Wazuh** (single-node) — Manager + Indexer + Dashboard  
 - **Postfix + `alert_mailer.py`** — отправка алертов Wazuh на почту
 
-Ключевая идея стенда — **Nginx пишет JSON-логи в `/var/log/nginx/*.log`, Wazuh читает эти файлы и поднимает алерты**, а при необходимости алерты отправляются на email.
-
----
-
-## Требования
-
-1) **Linux-хост** (желательно). В compose используется `network_mode: host` для Nginx и bind-mount на `/var/log/nginx`.  
-2) Установлены **Docker Engine** и **Docker Compose v2** (команда `docker compose`).  
-3) Свободные порты на хосте:
-   - `443` — Wazuh Dashboard
-   - `4443` — HTTPS для BDcrud (Nginx)
-   - `8008` — HTTP для BDcrud (Nginx)
-   - `8000` — API BDcrud напрямую
-   - `9200` — Wazuh Indexer (OpenSearch)
-   - `1514/1515/55000` и др. — сервисные порты Wazuh
-
-4) Для Wazuh Indexer (OpenSearch) на Linux нужно повысить лимит:
-```bash
-sudo sysctl -w vm.max_map_count=262144
-```
-Чтобы сохранить после перезагрузки — добавьте `vm.max_map_count=262144` в `/etc/sysctl.conf` и примените `sudo sysctl -p`.
-
+Ключевая идея — **Nginx пишет JSON-логи в `/var/log/nginx/*.log`, Wazuh читает эти файлы и поднимает алерты**, а при необходимости алерты отправляются на email.
 
 ---
 
 ## Структура репозитория
+
+Т.к. лабораторная работа чисто учебная все секреты и пароли мы не трогали, они лежат в первозданном виде
+
+Все секреты по путям ниже, их нужно менять СТРОГО ДО ПЕРВОГО ЗАПУСКА, либо обнулять контейнер, либо потом руками пихать внутрь
+
 
 - `docker-compose.yml` — **единый** compose для всего стенда
 - `BDcrud3/` — приложение + postgres + mongo + nginx-конфиг + сертификаты/секреты BDcrud
@@ -59,9 +43,6 @@ sudo sysctl -w vm.max_map_count=262144
 ```bash
 sudo mkdir -p /var/log/nginx
 sudo touch /var/log/nginx/access_json.log /var/log/nginx/error_json.log
-
-# В официальном nginx образе пользователь nginx обычно имеет UID 101
-sudo chown -R 101:101 /var/log/nginx
 sudo chmod 755 /var/log/nginx
 ```
 
@@ -113,7 +94,7 @@ curl -k https://localhost:4443/products
 Учетные данные (по умолчанию, из конфигов/секретов репозитория):
 - **admin / SecretPassword**
 
-> Сертификат у Dashboard также self-signed — браузер покажет предупреждение.
+> Сертификат у Dashboard также self-signed — браузер может показать предупреждение.
 
 ---
 
@@ -168,9 +149,10 @@ docker compose up -d --build
 
 Что нужно сделать:
 
-- `RELAYHOST_USERNAME` заменить с `MAIL` на ваш логин (чаще всего это email целиком)
+- Email для алертов нужно менять внутри главного docker-compose в блоке постфикса (3 последние строчки) + вставить туда пароль (токен) из пункта выше
+- `RELAYHOST_USERNAME` заменить с `MAIL` на ваш логин
 - `wazuh-docker/secrets/postfix_relay_password.txt` заменить с `PASSWORD` на пароль приложения
-- `ALLOWED_SENDER_DOMAINS` выставить по домену вашего адреса (часть после `@`), например: `mail.ru`, `list.ru`, `bk.ru`, `inbox.ru`
+- `ALLOWED_SENDER_DOMAINS` выставить по домену вашего адреса (часть после `@`), например: `mail.ru`, `list.ru`, `bk.ru`, `inbox.ru`, желательно, конечно, именно `mail.ru`, т.к. на нем тесты уже были проведены
 
 После правок перезапустите postfix:
 
