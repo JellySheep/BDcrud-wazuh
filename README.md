@@ -254,12 +254,6 @@ sudo tail -n 20 /var/log/nginx/error_json.log
 - `100017` — подозрительные User-Agent (`curl`, `Wget`, `python-requests`, `PostmanRuntime`)
 - `100018` — попытки доступа к чувствительным файлам (`.env`, `.git/config`, `phpMyAdmin`)
 
-Пример, чтобы гарантированно «дернуть» правило (LFI + подозрительный UA):
-
-```bash
-curl -k "https://localhost:4443/../../../../etc/passwd" -A "curl"
-```
-
 ---
 
 ## Проверка актуальности `ossec.conf` в контейнере
