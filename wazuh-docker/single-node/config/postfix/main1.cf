@@ -1,0 +1,44 @@
+# Основной конфиг Postfix с relayhost для Wazuh Docker
+compatibility_level = 3.9
+myorigin = $myhostname
+smtpd_banner = $myhostname ESMTP $mail_name (Debian)
+inet_protocols = all
+
+# Доверенные сети (Docker и localhost)
+mynetworks = 127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+
+# Разрешаем принимать почту от доверенных клиентов
+smtpd_recipient_restrictions = reject_non_fqdn_recipient, reject_unknown_recipient_domain, check_sender_access lmdb:/etc/postfix/allowed_senders,  reject
+smtpd_sender_restrictions = permit_mynetworks,reject
+
+# Relay для внешних адресов через Mail.ru
+relayhost = [smtp.mail.ru]:587
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = static:baranov-2004@list.ru:fq6upQKVDgx252CRCrD9
+smtp_sasl_security_options = noanonymous
+smtp_tls_security_level = may
+
+# Стандартные параметры
+mydestination = 
+mailbox_size_limit = 0
+alias_maps = lmdb:/etc/aliases
+alias_database = lmdb:/etc/aliases
+biff = no
+recipient_delimiter = +
+mailbox_command =
+inet_interfaces = all
+smtpd_delay_reject = yes
+smtpd_helo_required = yes
+maillog_file = /var/log/mail.log
+disable_vrfy_command = yes
+manpage_directory = /usr/share/man
+default_database_type = lmdb
+relay_domains = 
+header_size_limit = 4096000
+smtpd_client_restrictions = permit_mynetworks,permit_sasl_authenticated,reject
+smtpd_helo_restrictions = permit_mynetworks,reject_invalid_helo_hostname,permit
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+smtp_sasl_mechanism_filter = scram,scram,scram,scram,scram,DIGEST-MD5,ntlm,CRAM-MD5,login,plain,anonymous
+smtpd_relay_restrictions = permit
+message_size_limit = 0
+myhostname = 23152fa32897

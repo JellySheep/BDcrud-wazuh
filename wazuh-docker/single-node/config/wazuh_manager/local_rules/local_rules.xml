@@ -1,0 +1,51 @@
+<group name="nginx,web,attack,">
+
+  <!-- 500 errors -->
+  <rule id="100010" level="10">
+    <match>\"status\":500</match>
+    <description>Nginx: HTTP 500 server error.</description>
+  </rule>
+
+  <!-- 403 forbidden -->
+  <rule id="100011" level="7">
+    <match>\"status\":403</match>
+    <description>Nginx: HTTP 403 forbidden.</description>
+  </rule>
+
+  <!-- 401 unauthorized -->
+  <rule id="100012" level="6">
+    <match>\"status\":401</match>
+    <description>Nginx: HTTP 401 unauthorized.</description>
+  </rule>
+
+  <!-- SQL injection -->
+  <rule id="100013" level="14">
+    <regex>OR\s+1=1|UNION\s+SELECT|sqlmap</regex>
+    <description>Nginx: Possible SQL injection attempt.</description>
+  </rule>
+
+  <!-- Path traversal / LFI -->
+  <rule id="100014" level="13">
+    <regex>\.\./\.\.|/etc/passwd|/etc/shadow</regex>
+    <description>Nginx: Path traversal or LFI attempt.</description>
+  </rule>
+
+  <!-- Bruteforce / scanners -->
+  <rule id="100016" level="9">
+    <regex>Hydra|Nikto|masscan|dirbuster</regex>
+    <description>Nginx: Scanner or brute-force tool detected.</description>
+  </rule>
+
+  <!-- Suspicious User-Agents -->
+  <rule id="100017" level="8">
+    <regex>curl|Wget|python-requests|PostmanRuntime</regex>
+    <description>Nginx: Suspicious user-agent.</description>
+  </rule>
+
+  <!-- Sensitive files -->
+  <rule id="100018" level="12">
+    <regex>\.env|\.git/config|phpMyAdmin</regex>
+    <description>Nginx: Attempt to access sensitive files.</description>
+  </rule>
+
+</group>

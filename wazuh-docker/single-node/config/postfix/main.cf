@@ -1,0 +1,33 @@
+# Основной конфиг Postfix с relayhost для Wazuh Docker
+compatibility_level = 3.9
+myorigin = $myhostname
+smtpd_banner = $myhostname ESMTP $mail_name (Debian)
+inet_protocols = all
+
+# Доверенные сети (Docker и localhost)
+mynetworks = 127.0.0.0/8,172.0.0.0/8  
+
+# Разрешаем принимать почту от доверенных клиентов
+smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_sender_restrictions = permit_mynetworks
+
+# Relay для внешних адресов через Mail.ru
+relayhost = [smtp.mail.ru]:587
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = static:MAIL:PASSWORD
+smtp_sasl_security_options = noanonymous
+smtp_tls_security_level = encrypt
+
+# Стандартные параметры
+mydestination =
+mailbox_size_limit = 0
+alias_maps = lmdb:/etc/aliases
+alias_database = lmdb:/etc/aliases
+biff = no
+recipient_delimiter = +
+mailbox_command =
+inet_interfaces = all
+smtpd_delay_reject = yes
+smtpd_helo_required = no
+maillog_file = /var/log/mail.log
+disable_vrfy_command = yes

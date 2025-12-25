@@ -1,0 +1,67 @@
+#version: "3.9"                         # Версия 
+
+services:
+  app:                                 # Сервис приложения 
+    build:
+      context: .                       # Собираем образ из текущей директории
+      dockerfile: Dockerfile           # Используем Dockerfile в корне проекта
+    environment:
+      STORAGE: "${STORAGE:-postgres}"  # Какое хранилище использовать: mongo / memory / по умолчанию postgres
+     #POSTGRES_DSN: "postgres://postgres:postgres@postgres:5432/postgres"  # Строка подключения к PostgreSQL
+      MONGO_DSN: "mongodb://mongo:27017"           # Строка подключения к MongoDB
+      MONGO_DB: "testdb"                           # Имя БД в Mongo
+      MONGO_COLL: "products"                       # Коллекция Mongo для хранения товаров
+      POSTGRES_USER: "postgres"          # Пользователь PostgreSQL для сборки DSN в entrypoint
+      POSTGRES_DB: "postgres"            # Имя БД PostgreSQL
+      POSTGRES_HOST: "postgres"          # Хост PostgreSQL - имя сервиса
+      POSTGRES_PORT: "5432"              # Порт PostgreSQL
+    depends_on:
+      - postgres                        # Подождать поднятия PostgreSQL перед стартом
+      - mongo                           # Подождать поднятия MongoDB
+    ports:
+      - "8000:8000"                     # Проброс порта приложения на хост localhost:8000
+    secrets:
+      - postgres_password               #Добавляем секрет для корректной работы скрипты
+
+  postgres:                             # Сервис PostgreSQL
+    image: postgres:16                  # Официальный образ PostgreSQL 
+    environment:
+      POSTGRES_USER: postgres           # Логин пользователя Postgres
+      POSTGRES_DB: postgres             # Имя базы данных
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password  # Пароль читается из секрета внутри контейнера
+    secrets:
+      - postgres_password               # Подключаем Docker secret с паролем
+    ports:
+      - "5432:5432"                     # Пробрасываем порт PostgreSQL на хост
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Том для постоянного хранения данных БД
+      - ./sql/init_postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro  # скрипт инициализации SQL
+
+  mongo:                                # Сервис MongoDB
+    image: mongo:7                      # Официальный образ MongoDB 
+    ports:
+      - "27017:27017"                   # Проброс порта MongoDB на хост для отладки
+    volumes:
+      - mongodata:/data/db              # Том для хранения данных MongoDB
+
+  nginx:                                # Реверс-прокси nginx перед приложением
+    image: nginx:stable                 # Стабильный образ nginx
+    network_mode: "host"                # nginx слушает напрямую порты хоста 80 и 443
+    depends_on:
+      - app                             # Ждём, пока поднимется приложение
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro  # Основной конфиг nginx из проекта
+      - ./certs:/etc/nginx/certs:ro                  # Папка с публичными сертификатами 
+      - /var/log/nginx:/var/log/nginx
+    secrets:
+      - nginx_app_ssl_key               # Docker secret с приватным ключом TLS для nginx
+
+secrets:
+  postgres_password:                    # Docker secret с паролем пользователя postgres
+    file: ./secrets/postgres_password.txt
+  nginx_app_ssl_key:                    # Docker secret с приватным ключом nginx 
+    file: ./secrets/nginx.key
+
+volumes:
+  pgdata:                               # Том для данных PostgreSQL
+  mongodata:                            # Том для данных MongoDB
