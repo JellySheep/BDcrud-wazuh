@@ -329,3 +329,76 @@ docker compose -f generate-indexer-certs.yml run --rm generator
 
 - не храните приватные ключи и пароли в Git
 - используйте `.gitignore` и внешнее секрет-хранилище / CI variables / Docker secrets «извне»
+
+## Замена сертификатов Nginx (TLS)
+
+> Nginx использует файлы:  
+> - `secrets/nginx.key` — приватный ключ  
+> - `certs/nginx.crt` — публичный сертификат
+
+1) Остановить контейнеры (рекомендовано, чтобы ключ точно перечитался):
+```bash
+docker compose down
+```
+
+2) Перегенерировать ключ/сертификат (self-signed на 365 дней):
+```bash
+mkdir -p secrets certs
+
+openssl req -x509 -nodes -days 365   -newkey rsa:2048   -keyout secrets/nginx.key   -out certs/nginx.crt   -subj "/CN=localhost"
+```
+
+3) Поднять стенд заново:
+```bash
+docker compose up -d --build
+```
+
+4) Проверка, что HTTPS живой:
+```bash
+curl -k https://localhost/products
+```
+
+> Важно: если ключ/сертификат подключены как **Docker secrets**, то после замены файлов на хосте обязательно нужен `docker compose down` → `up`, чтобы секреты переподхватились корректно.
+
+---
+
+## Генерация “инцидентов” в nginx access_json.log (для алертов SIEM)
+
+Команда ниже дописывает пачку **явно вредоносных** запросов в:
+`/var/log/nginx/access_json.log`
+
+```bash
+sudo bash -c '
+
+echo "{\"time\":\"2025-12-25T18:20:01+10:00\",\"remote_addr\":\"203.0.113.10\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/search?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E\",\"status\":400,\"bytes\":312,\"request_time\":0.012,\"http_user_agent\":\"Mozilla/5.0\",\"http_x_forwarded_for\":\"198.51.100.23\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:06+10:00\",\"remote_addr\":\"198.51.100.77\",\"host\":\"app.local\",\"method\":\"POST\",\"uri\":\"/login?user=admin%27%20OR%20%271%27%3D%271%27--&pass=x\",\"status\":401,\"bytes\":278,\"request_time\":0.031,\"http_user_agent\":\"sqlmap/1.7\",\"http_x_forwarded_for\":\"-\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:11+10:00\",\"remote_addr\":\"203.0.113.55\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/download?file=..%2F..%2F..%2Fetc%2Fpasswd\",\"status\":403,\"bytes\":221,\"request_time\":0.008,\"http_user_agent\":\"curl/8.5.0\",\"http_x_forwarded_for\":\"10.0.0.5\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:15+10:00\",\"remote_addr\":\"192.0.2.44\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/.git/config\",\"status\":404,\"bytes\":153,\"request_time\":0.006,\"http_user_agent\":\"Mozilla/5.0 (compatible; Nikto/2.5.0)\",\"http_x_forwarded_for\":\"-\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:20+10:00\",\"remote_addr\":\"198.51.100.120\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/api?url=http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data%2F\",\"status\":400,\"bytes\":245,\"request_time\":0.017,\"http_user_agent\":\"python-requests/2.31\",\"http_x_forwarded_for\":\"-\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:25+10:00\",\"remote_addr\":\"203.0.113.99\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/index.php?page=%252e%252e%252f%252e%252e%252fetc%252fpasswd\",\"status\":403,\"bytes\":233,\"request_time\":0.010,\"http_user_agent\":\"Mozilla/5.0\",\"http_x_forwarded_for\":\"172.16.1.9\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:30+10:00\",\"remote_addr\":\"192.0.2.200\",\"host\":\"app.local\",\"method\":\"TRACE\",\"uri\":\"/\",\"status\":405,\"bytes\":128,\"request_time\":0.004,\"http_user_agent\":\"Mozilla/5.0\",\"http_x_forwarded_for\":\"-\"}" >> /var/log/nginx/access_json.log
+
+echo "{\"time\":\"2025-12-25T18:20:35+10:00\",\"remote_addr\":\"198.51.100.66\",\"host\":\"app.local\",\"method\":\"GET\",\"uri\":\"/wp-login.php\",\"status\":404,\"bytes\":161,\"request_time\":0.005,\"http_user_agent\":\"Masscan/1.3\",\"http_x_forwarded_for\":\"-\"}" >> /var/log/nginx/access_json.log
+
+'
+```
+
+Проверка, что записи реально появились:
+```bash
+sudo tail -n 20 /var/log/nginx/access_json.log
+```
+
+Дальше можно сразу смотреть алерты Wazuh:
+
+```bash
+docker compose exec wazuh.manager bash -lc 'tail -n 50 /var/ossec/logs/alerts/alerts.json'
+```
+
+Если нужно, чтобы алерты «вылетали» пачкой — добавить такие строки несколько раз (или дублируй блок с разными `time`/`remote_addr`).
+
